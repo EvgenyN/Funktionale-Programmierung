@@ -146,6 +146,20 @@ prop_zero_bind_r m   = (m >> mzero)  == (mzero :: Option Int)
 prop_plus_dist_r m k l =
   (m >>= \ x -> k x `mplus` l x) == ((m >>= k) `mplus` (m >>= l) :: Option Int)
 
+testOption = (prop_monad_left 2 (\x -> Some(x*x))) &&
+             (prop_monad_right (Some 3)) &&
+             (prop_monad_assoc (Some 3) (\x -> Some(x*x)) (\x -> Some(2*x))) &&
+             (prop_mzero_left (Some 3)) &&
+             (prop_mzero_right (Some 3)) &&
+             (prop_mzero_assoc (Some 1) (Some 2) (Some 3)) &&
+             (prop_zero_bind_l (\x -> Some(x*x))) &&
+             (prop_zero_bind_r (Some 2)) &&
+             (prop_plus_dist_r (Some 3) (\x -> Some(x*x)) (\x -> Some(2*x)))
+
+
+
+
+
 ----------------------------------------------------------------------
 -- Exercise 3
 ----------------------------------------------------------------------
@@ -188,35 +202,34 @@ prop_unique = forAll (choose (1,100)) $ \ n ->
 -- Implement a monad that lets you pay for computation
 
 -- | Abstract monad for accumulating costs.
+
 class Monad m => MonadCost m where
   pay :: Integer -> m ()
 
-newtype Cost a = Cost (Integer -> (a, Integer))
+newtype Cost a = C(Integer -> (a, Integer))
 
 instance Monad Cost where
-  return a = Cost $ \n -> (a, n)
-  m >>= k  = undefined
+  return a = C(\n -> (a, n))
+  m >>= k  = C $ \n -> let (a, n') = runCost m n in runCost (k a) n'
 
 instance MonadCost Cost where
-  pay n = undefined
+  pay m = C(\n -> ((), n + m))
 
-runCost :: Cost a -> (a, Integer)
-runCost = undefined
+runCost :: Cost a -> Integer -> (a, Integer)
+runCost (C f) n = f n
 
 -- | @revAppSum xs acc@ reverses @xs@ onto @acc@ and 'pay's amount @x@
 --   for each element @x@ of the list @xs@ that is touched.
 revAppSum :: MonadCost m => [Integer] -> [Integer] -> m [Integer]
-revAppSum = undefined
+revAppSum [] acc = return acc
+revAppSum (x:xs) acc = pay x >> revAppSum xs (x:acc)
 
 -- | @reverseSum xs@ returns @(reverse xs, sum xs)@ which is computed
 --   by a call to 'revAppSum'.
 reverseSum :: [Integer] -> ([Integer], Integer)
-reverseSum xs = runCost $ revAppSum xs []
+reverseSum xs = runCost (revAppSum xs []) 0
 
-revAppSum1 :: a -> a -> Cost a
-revAppSum1 [] xs = return xs acc
-revAppSum1 (a:as) xs = inc >> revAppSum1 as (a:xs)
-    where inc acc = acc + 1
+testOutput = reverseSum [1,2,3,4,5]
 
 -- Tests for Exercise 4 ----------------------------------------------
 

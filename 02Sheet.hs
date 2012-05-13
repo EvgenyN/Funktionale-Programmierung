@@ -97,13 +97,27 @@ validSudoku n s = (checkRows n s) && (checkRows n (List.transpose s)) && (checkR
 --
 --  with sensible indentation to express child and sibling relations.
 mainDir :: FilePath -> IO ()
-mainDir root = 
-    do content <- getDirectoryContents root
-       dirs <- filterM doesDirectoryExist $ map (combine root) content
-       mapM_ print dirs 
-{-       mapM_ (printDir root) content
-    where printDir root r = do b <- doesDirectoryExist (root </> r)
-                               if b then do {putStrLn r; mainDir (root </> r)} else putStrLn r-}
+mainDir root = do 
+    putStr root
+    putStr "\n"
+    printRoot 1 root
+
+printRoot :: Int -> FilePath -> IO ()
+printRoot n root = 
+    do b <- doesDirectoryExist root
+       when b $
+        do content <- getDirectoryContents root
+           mapM_ (printDir root) (reverse content)
+        where
+            printDir root r | r == "." || r == ".." = do return ()
+                            | otherwise             = do g <- doesDirectoryExist (root </> r)
+                                                         when g $ do {printLine n r; printRoot (n + 1) (root </> r)}
+
+printLine :: Int -> FilePath -> IO ()
+printLine 0 r = do putStr r
+                   putStr "\n"
+printLine n r = do putStr "  "
+                   printLine (n - 1) r                                                         
 
 main :: IO ()
 main = do
@@ -136,10 +150,14 @@ testMO = or  <$> mapM verboseM tO
 -- Implement lazy monadic conjunction and disjunction!
 
 andM :: Monad m => [m Bool] -> m Bool
-andM = undefined
+andM [] = return True
+andM (x:xs) = do b <- x
+                 if b then (andM xs) else return False 
 
 orM  :: Monad m => [m Bool] -> m Bool
-orM  = undefined
+orM [] = return False
+orM (x:xs) = do b <- x
+                if b then return True else orM xs 
 
 -- The following test cases should only print those Booleans
 -- that are necessary to determine the result of the operation!
