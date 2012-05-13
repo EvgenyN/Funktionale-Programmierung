@@ -97,7 +97,13 @@ validSudoku n s = (checkRows n s) && (checkRows n (List.transpose s)) && (checkR
 --
 --  with sensible indentation to express child and sibling relations.
 mainDir :: FilePath -> IO ()
-mainDir root = undefined
+mainDir root = 
+    do content <- getDirectoryContents root
+       dirs <- filterM doesDirectoryExist $ map (combine root) content
+       mapM_ print dirs 
+{-       mapM_ (printDir root) content
+    where printDir root r = do b <- doesDirectoryExist (root </> r)
+                               if b then do {putStrLn r; mainDir (root </> r)} else putStrLn r-}
 
 main :: IO ()
 main = do

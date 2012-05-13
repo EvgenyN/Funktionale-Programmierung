@@ -110,9 +110,8 @@ instance Monad Option where
 
 instance MonadPlus Option where
   mzero = None
-  mplus mzero    (Some a) = Some a 
-  mplus (Some a) mzero    = Some a
-  mplus a        b        = a
+  mplus None a    = a 
+  mplus a    b    = a
 
 -- Tests for Exercise 2 ----------------------------------------------
 
@@ -192,10 +191,10 @@ prop_unique = forAll (choose (1,100)) $ \ n ->
 class Monad m => MonadCost m where
   pay :: Integer -> m ()
 
-newtype Cost a = Cost Undefined
+newtype Cost a = Cost (Integer -> (a, Integer))
 
 instance Monad Cost where
-  return a = undefined
+  return a = Cost $ \n -> (a, n)
   m >>= k  = undefined
 
 instance MonadCost Cost where
@@ -213,6 +212,11 @@ revAppSum = undefined
 --   by a call to 'revAppSum'.
 reverseSum :: [Integer] -> ([Integer], Integer)
 reverseSum xs = runCost $ revAppSum xs []
+
+revAppSum1 :: a -> a -> Cost a
+revAppSum1 [] xs = return xs acc
+revAppSum1 (a:as) xs = inc >> revAppSum1 as (a:xs)
+    where inc acc = acc + 1
 
 -- Tests for Exercise 4 ----------------------------------------------
 
